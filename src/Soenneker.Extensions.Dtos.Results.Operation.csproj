@@ -14,7 +14,7 @@
         <AssemblyName>Soenneker.Extensions.Dtos.Results.Operation</AssemblyName>
         <PackageId>Soenneker.Extensions.Dtos.Results.Operation</PackageId>
         <PackageTags>extensions dtos results operation operations problemdetails result operationresultsextension extension csharp dotnet c# .net</PackageTags>
-        <Copyright>Copyright © 2025 Jake Soenneker</Copyright>
+        <Copyright>Copyright © 2025-2026 Jake Soenneker</Copyright>
         <Authors>Jake Soenneker</Authors>
         <Company>https://soenneker.com</Company>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
