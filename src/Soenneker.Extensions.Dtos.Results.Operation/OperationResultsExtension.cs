@@ -60,7 +60,11 @@ public static class OperationResultsExtension
     public static IActionResult ToActionResult<T>(this OperationResult<T> resp) =>
         ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
 
-    ///<inheritdoc cref="ToActionResult{T}"/>
+    /// <summary>
+    /// Executes the to action result operation.
+    /// </summary>
+    /// <param name="resp">The resp.</param>
+    /// <returns>The result of the operation.</returns>
     public static IActionResult ToActionResult(this OperationResult resp) => ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
 
     /// <summary>
