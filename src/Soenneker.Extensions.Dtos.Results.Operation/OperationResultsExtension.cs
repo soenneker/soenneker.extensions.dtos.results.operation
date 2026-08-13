@@ -11,15 +11,21 @@ namespace Soenneker.Extensions.Dtos.Results.Operation;
 /// </summary>
 public static class OperationResultsExtension
 {
-    private static IActionResult ToActionResultCore(bool succeeded, int statusCode, object? value, ProblemDetailsDto? problem)
+    private static readonly StatusCodeResult _noContentResult = new(StatusCodes.Status204NoContent);
+
+    private static IActionResult ToResultCore(bool succeeded, int statusCode, object? value, ProblemDetailsDto? problem, bool useJsonResult)
     {
         if (succeeded)
         {
             if (statusCode == StatusCodes.Status204NoContent)
-                return new StatusCodeResult(StatusCodes.Status204NoContent);
+                return _noContentResult;
 
             // 2xx with body
-            return new ObjectResult(value) { StatusCode = statusCode == 0 ? StatusCodes.Status200OK : statusCode };
+            int successStatusCode = statusCode == 0 ? StatusCodes.Status200OK : statusCode;
+
+            return useJsonResult
+                ? new JsonResult(value) { StatusCode = successStatusCode }
+                : new ObjectResult(value) { StatusCode = successStatusCode };
         }
 
         // Ensure a ProblemDetails exists
@@ -29,7 +35,11 @@ public static class OperationResultsExtension
             Status = statusCode == 0 ? StatusCodes.Status500InternalServerError : statusCode
         };
 
-        return new ObjectResult(pd) { StatusCode = pd.Status ?? statusCode };
+        int failureStatusCode = pd.Status ?? (statusCode == 0 ? StatusCodes.Status500InternalServerError : statusCode);
+
+        return useJsonResult
+            ? new JsonResult(pd) { StatusCode = failureStatusCode }
+            : new ObjectResult(pd) { StatusCode = failureStatusCode };
     }
 
     /// <summary>
@@ -43,29 +53,40 @@ public static class OperationResultsExtension
     /// <list type="bullet">
     /// <item>
     /// <description>
-    /// For successful results (<see cref="OperationResult{T}.Succeeded"/> is <c>true</c>):
+    /// For successful results (<see cref="OperationResult.Succeeded"/> is <c>true</c>):
     /// returns a 2xx result with the associated value, or a 204 No Content result if 
-    /// <see cref="OperationResult{T}.StatusCode"/> is 204.
+    /// <see cref="OperationResult.StatusCode"/> is 204.
     /// </description>
     /// </item>
     /// <item>
     /// <description>
-    /// For failed results (<see cref="OperationResult{T}.Succeeded"/> is <c>false</c>):
-    /// returns a result containing the associated <see cref="OperationResult{T}.Problem"/> details, 
+    /// For failed results (<see cref="OperationResult.Succeeded"/> is <c>false</c>):
+    /// returns a result containing the associated <see cref="OperationResult.Problem"/> details,
     /// or a default problem result if no details are provided.
     /// </description>
     /// </item>
     /// </list>
     /// </returns>
     public static IActionResult ToActionResult<T>(this OperationResult<T> resp) =>
-        ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
+        ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, false);
 
     /// <summary>
     /// Executes the to action result operation.
     /// </summary>
     /// <param name="resp">The resp.</param>
     /// <returns>The result of the operation.</returns>
-    public static IActionResult ToActionResult(this OperationResult resp) => ToActionResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem);
+    public static IActionResult ToActionResult(this OperationResult resp) => ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, false);
+
+    /// <summary>
+    /// Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.
+    /// </summary>
+    public static IActionResult ToJsonResult<T>(this OperationResult<T> resp) =>
+        ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, true);
+
+    /// <summary>
+    /// Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.
+    /// </summary>
+    public static IActionResult ToJsonResult(this OperationResult resp) => ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, true);
 
     /// <summary>
     /// If the result failed, retypes it to TOut and preserves StatusCode/Problem.
@@ -79,8 +100,7 @@ public static class OperationResultsExtension
         return new OperationResult<TOut>
         {
             StatusCode = resp.StatusCode,
-            Problem = resp.Problem,
-            Value = default
+            Problem = resp.Problem
         };
     }
 }
