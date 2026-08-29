@@ -71,27 +71,30 @@ public static class OperationResultsExtension
         ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, false);
 
     /// <summary>
-    /// Executes the to action result operation.
+    /// Converts an operation result into an ASP.NET Core action result while preserving its success value or error response.
     /// </summary>
-    /// <param name="resp">The resp.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="resp">The operation result to translate.</param>
+    /// <returns>The corresponding ASP.NET Core action result.</returns>
     public static IActionResult ToActionResult(this OperationResult resp) => ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, false);
 
     /// <summary>
     /// Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.
     /// </summary>
+    /// <returns>Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.</returns>
     public static IActionResult ToJsonResult<T>(this OperationResult<T> resp) =>
         ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, true);
 
     /// <summary>
     /// Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.
     /// </summary>
+    /// <returns>Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.</returns>
     public static IActionResult ToJsonResult(this OperationResult resp) => ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, true);
 
     /// <summary>
     /// If the result failed, retypes it to TOut and preserves StatusCode/Problem.
     /// Throws if called on a successful result (use To/Map for that).
     /// </summary>
+    /// <returns>If the result failed, retypes it to TOut and preserves StatusCode/Problem. Throws if called on a successful result (use To/Map for that).</returns>
     public static OperationResult<TOut> ToFailure<TOut>(this OperationResult resp)
     {
         if (resp.Succeeded)
