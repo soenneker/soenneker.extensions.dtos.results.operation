@@ -98,7 +98,7 @@ public static class OperationResultsExtension
     public static OperationResult<TOut> ToFailure<TOut>(this OperationResult resp)
     {
         if (resp.Succeeded)
-            throw new InvalidOperationException("AsFailureOf<> should only be used on failed responses.");
+            throw new InvalidOperationException("ToFailure<> should only be used on failed responses.");
 
         return new OperationResult<TOut>
         {
