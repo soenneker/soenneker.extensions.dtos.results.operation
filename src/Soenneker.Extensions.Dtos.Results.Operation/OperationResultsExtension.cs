@@ -13,34 +13,47 @@ public static class OperationResultsExtension
 {
     private static readonly StatusCodeResult _noContentResult = new(StatusCodes.Status204NoContent);
 
-    private static IActionResult ToResultCore(bool succeeded, int statusCode, object? value, ProblemDetailsDto? problem, bool useJsonResult)
+    private static IActionResult ToResultCore<T>(OperationResult<T> response, bool useJsonResult)
     {
-        if (succeeded)
-        {
-            if (statusCode == StatusCodes.Status204NoContent)
-                return _noContentResult;
+        if (!response.Succeeded)
+            return ToFailureResult(response.StatusCode, response.Problem, useJsonResult);
 
-            // 2xx with body
-            int successStatusCode = statusCode == 0 ? StatusCodes.Status200OK : statusCode;
+        int statusCode = response.StatusCode;
+        if (statusCode == StatusCodes.Status204NoContent)
+            return _noContentResult;
 
-            return useJsonResult
-                ? new JsonResult(value) { StatusCode = successStatusCode }
-                : new ObjectResult(value) { StatusCode = successStatusCode };
-        }
+        // Read and box the typed payload only when the response needs a body.
+        return CreateResult(response.Value, statusCode == 0 ? StatusCodes.Status200OK : statusCode, useJsonResult);
+    }
 
-        // Ensure a ProblemDetails exists
+    private static IActionResult ToResultCore(OperationResult response, bool useJsonResult)
+    {
+        if (!response.Succeeded)
+            return ToFailureResult(response.StatusCode, response.Problem, useJsonResult);
+
+        int statusCode = response.StatusCode;
+        if (statusCode == StatusCodes.Status204NoContent)
+            return _noContentResult;
+
+        return CreateResult(response.Value, statusCode == 0 ? StatusCodes.Status200OK : statusCode, useJsonResult);
+    }
+
+    private static IActionResult ToFailureResult(int statusCode, ProblemDetailsDto? problem, bool useJsonResult)
+    {
+        int fallbackStatusCode = statusCode == 0 ? StatusCodes.Status500InternalServerError : statusCode;
         ProblemDetailsDto pd = problem ?? new ProblemDetailsDto
         {
             Title = "Internal Server Error",
-            Status = statusCode == 0 ? StatusCodes.Status500InternalServerError : statusCode
+            Status = fallbackStatusCode
         };
 
-        int failureStatusCode = pd.Status ?? (statusCode == 0 ? StatusCodes.Status500InternalServerError : statusCode);
-
-        return useJsonResult
-            ? new JsonResult(pd) { StatusCode = failureStatusCode }
-            : new ObjectResult(pd) { StatusCode = failureStatusCode };
+        return CreateResult(pd, pd.Status ?? fallbackStatusCode, useJsonResult);
     }
+
+    private static IActionResult CreateResult(object? value, int statusCode, bool useJsonResult) =>
+        useJsonResult
+            ? new JsonResult(value) { StatusCode = statusCode }
+            : new ObjectResult(value) { StatusCode = statusCode };
 
     /// <summary>
     /// Converts the specified <see cref="OperationResult"/> into an <see cref="IActionResult"/> 
@@ -68,27 +81,27 @@ public static class OperationResultsExtension
     /// </list>
     /// </returns>
     public static IActionResult ToActionResult<T>(this OperationResult<T> resp) =>
-        ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, false);
+        ToResultCore(resp, false);
 
     /// <summary>
     /// Converts an operation result into an ASP.NET Core action result while preserving its success value or error response.
     /// </summary>
     /// <param name="resp">The operation result to translate.</param>
     /// <returns>The corresponding ASP.NET Core action result.</returns>
-    public static IActionResult ToActionResult(this OperationResult resp) => ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, false);
+    public static IActionResult ToActionResult(this OperationResult resp) => ToResultCore(resp, false);
 
     /// <summary>
     /// Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.
     /// </summary>
     /// <returns>Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.</returns>
     public static IActionResult ToJsonResult<T>(this OperationResult<T> resp) =>
-        ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, true);
+        ToResultCore(resp, true);
 
     /// <summary>
     /// Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.
     /// </summary>
     /// <returns>Converts the operation result to a JSON-only action result, bypassing MVC content negotiation.</returns>
-    public static IActionResult ToJsonResult(this OperationResult resp) => ToResultCore(resp.Succeeded, resp.StatusCode, resp.Value, resp.Problem, true);
+    public static IActionResult ToJsonResult(this OperationResult resp) => ToResultCore(resp, true);
 
     /// <summary>
     /// If the result failed, retypes it to TOut and preserves StatusCode/Problem.
